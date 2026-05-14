@@ -28,6 +28,7 @@ from recommender import (
 )
 
 app = Flask(__name__)
+init_db()
 
 # ── TMDB config ───────────────────────────────────────────────────────────────
 
