@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!-- ── Page header ────────────────────────────────────────────────── -->
+<div class="page-header">
+  <h1>My List</h1>
+  <button class="btn btn-primary" onclick="openAddModal('watchlist')">+ Add Item</button>
+</div>
+
+<!-- ── Filter bar ─────────────────────────────────────────────────── -->
+<div class="filter-bar">
+  <div class="filter-group">
+    <span class="filter-label">Type</span>
+    <a class="filter-pill {% if not filter_type %}active{% endif %}" href="/watchlist">All</a>
+    <a class="filter-pill {% if filter_type == 'movie' %}active{% endif %}"  href="/watchlist?type=movie">Movies</a>
+    <a class="filter-pill {% if filter_type == 'book' %}active{% endif %}"   href="/watchlist?type=book">Books</a>
+    <a class="filter-pill {% if filter_type == 'manga' %}active{% endif %}"  href="/watchlist?type=manga">Manga</a>
+    <a class="filter-pill {% if filter_type == 'anime' %}active{% endif %}"  href="/watchlist?type=anime">Anime</a>
+    <a class="filter-pill {% if filter_type == 'show' %}active{% endif %}"   href="/watchlist?type=show">Shows</a>
+  </div>
+</div>
+
+<!-- ── Card grid ──────────────────────────────────────────────────── -->
+{% if items %}
+<div class="card-grid">
+  {% for item in items %}
+  <div class="card">
+
+    <!-- Cover image -->
+    <div class="card-cover">
+      {% if item.cover_url %}
+      <img src="{{ item.cover_url | e }}" alt=""
+           onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+      <div class="card-cover-placeholder {{ item.type }}" style="display:none">{{ item.title[0] | upper }}</div>
+      {% else %}
+      <div class="card-cover-placeholder {{ item.type }}">{{ item.title[0] | upper }}</div>
+      {% endif %}
+    </div>
+
+    <div class="card-body">
+      <div class="card-top">
+        <span class="badge badge-{{ item.type }}">{{ item.type | title }}</span>
+      </div>
+      <div class="card-title">{{ item.title }}</div>
+      {% if item.notes %}
+      <div class="card-notes">{{ item.notes }}</div>
+      {% endif %}
+      <div class="card-meta">Added {{ item.date_added }}</div>
+    </div>
+
+    <div class="card-actions">
+      <button class="btn-icon primary"
+              data-action="move-watchlist"
+              data-id="{{ item.id }}"
+              data-title="{{ item.title | e }}"
+              data-type="{{ item.type }}">
+        &#8599; Move to Library
+      </button>
+      <button class="btn-icon danger"
+              data-action="delete-watchlist"
+              data-id="{{ item.id }}">
+        &#128465;
+      </button>
+    </div>
+
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon">&#127919;</div>
+  <p>Your list is empty. Add titles you want to check out, or use Discover to find recommendations!</p>
+  <button class="btn btn-primary" style="margin-top:0.5rem" onclick="openAddModal('watchlist')">+ Add Item</button>
+</div>
+{% endif %}
+
+{% endblock %}

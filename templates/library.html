@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!-- ── Page header ────────────────────────────────────────────────── -->
+<div class="page-header">
+  <h1>My Library</h1>
+  <button class="btn btn-primary" onclick="openAddModal('library')">+ Add Item</button>
+</div>
+
+<!-- ── Stats row ──────────────────────────────────────────────────── -->
+<div class="stats-row">
+  <div class="stat-pill">
+    <span class="badge badge-movie">Movie</span>
+    <strong>{{ counts.movie }}</strong>
+  </div>
+  <div class="stat-pill">
+    <span class="badge badge-book">Book</span>
+    <strong>{{ counts.book }}</strong>
+  </div>
+  <div class="stat-pill">
+    <span class="badge badge-manga">Manga</span>
+    <strong>{{ counts.manga }}</strong>
+  </div>
+  <div class="stat-pill">
+    <span class="badge badge-anime">Anime</span>
+    <strong>{{ counts.anime }}</strong>
+  </div>
+  <div class="stat-pill">
+    <span class="badge badge-show">Show</span>
+    <strong>{{ counts.show }}</strong>
+  </div>
+  <div class="stat-pill">
+    Total &nbsp;<strong>{{ counts.movie + counts.book + counts.manga + counts.anime + counts.show }}</strong>
+  </div>
+</div>
+
+<!-- ── For You ────────────────────────────────────────────────────── -->
+<div class="recs-section" id="recs-section">
+  <div class="recs-header">
+    <div>
+      <div class="recs-title">Recommended for You</div>
+      <div class="recs-subtitle" id="recs-subtitle">Based on your library</div>
+    </div>
+    <button class="btn btn-sm btn-secondary" id="recs-refresh-btn" onclick="loadLibraryRecs(true)" style="margin-left:auto">&#8635; Refresh</button>
+  </div>
+  <div id="recs-type-tabs" class="recs-type-tabs" style="display:none">
+    <button class="recs-type-tab active" data-type="all"   onclick="filterRecs('all')">All</button>
+    <button class="recs-type-tab"        data-type="movie" onclick="filterRecs('movie')">Movies</button>
+    <button class="recs-type-tab"        data-type="show"  onclick="filterRecs('show')">Shows</button>
+    <button class="recs-type-tab"        data-type="manga" onclick="filterRecs('manga')">Manga</button>
+    <button class="recs-type-tab"        data-type="anime" onclick="filterRecs('anime')">Anime</button>
+    <button class="recs-type-tab"        data-type="book"  onclick="filterRecs('book')">Books</button>
+  </div>
+  <div id="recs-loading" class="recs-state">Loading recommendations...</div>
+  <div id="recs-empty"   class="recs-state" style="display:none">Add completed or in-progress items to get personalized picks.</div>
+  <div id="recs-scroll"  class="recs-scroll" style="display:none"></div>
+</div>
+
+<!-- ── Filter bar ─────────────────────────────────────────────────── -->
+<div class="filter-bar">
+  <div class="filter-group">
+    <span class="filter-label">Type</span>
+    <a class="filter-pill {% if not filter_type %}active{% endif %}" href="/library{% if filter_status %}?status={{ filter_status }}{% endif %}">All</a>
+    <a class="filter-pill {% if filter_type == 'movie' %}active{% endif %}"
+       href="/library?type=movie{% if filter_status %}&status={{ filter_status }}{% endif %}">Movies</a>
+    <a class="filter-pill {% if filter_type == 'book' %}active{% endif %}"
+       href="/library?type=book{% if filter_status %}&status={{ filter_status }}{% endif %}">Books</a>
+    <a class="filter-pill {% if filter_type == 'manga' %}active{% endif %}"
+       href="/library?type=manga{% if filter_status %}&status={{ filter_status }}{% endif %}">Manga</a>
+    <a class="filter-pill {% if filter_type == 'anime' %}active{% endif %}"
+       href="/library?type=anime{% if filter_status %}&status={{ filter_status }}{% endif %}">Anime</a>
+    <a class="filter-pill {% if filter_type == 'show' %}active{% endif %}"
+       href="/library?type=show{% if filter_status %}&status={{ filter_status }}{% endif %}">Shows</a>
+  </div>
+  <div class="filter-divider"></div>
+  <div class="filter-group">
+    <span class="filter-label">Status</span>
+    <a class="filter-pill {% if not filter_status %}active{% endif %}"
+       href="/library{% if filter_type %}?type={{ filter_type }}{% endif %}">All</a>
+    <a class="filter-pill {% if filter_status == 'plan_to_watch' %}active{% endif %}"
+       href="/library?status=plan_to_watch{% if filter_type %}&type={{ filter_type }}{% endif %}">Plan to Watch</a>
+    <a class="filter-pill {% if filter_status == 'in_progress' %}active{% endif %}"
+       href="/library?status=in_progress{% if filter_type %}&type={{ filter_type }}{% endif %}">In Progress</a>
+    <a class="filter-pill {% if filter_status == 'completed' %}active{% endif %}"
+       href="/library?status=completed{% if filter_type %}&type={{ filter_type }}{% endif %}">Completed</a>
+    <a class="filter-pill {% if filter_status == 'dropped' %}active{% endif %}"
+       href="/library?status=dropped{% if filter_type %}&type={{ filter_type }}{% endif %}">Dropped</a>
+  </div>
+</div>
+
+<!-- ── Card grid ──────────────────────────────────────────────────── -->
+{% if items %}
+<div class="card-grid">
+  {% for item in items %}
+  {% set filled = (item.rating / 2) | int if item.rating else 0 %}
+  {% set empty  = 5 - filled %}
+  <div class="card">
+
+    <!-- Cover image -->
+    <div class="card-cover">
+      {% if item.cover_url %}
+      <img src="{{ item.cover_url | e }}" alt=""
+           onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+      <div class="card-cover-placeholder {{ item.type }}" style="display:none">{{ item.title[0] | upper }}</div>
+      {% else %}
+      <div class="card-cover-placeholder {{ item.type }}">{{ item.title[0] | upper }}</div>
+      {% endif %}
+    </div>
+
+    <div class="card-body">
+      <div class="card-top">
+        <span class="badge badge-{{ item.type }}">{{ item.type | title }}</span>
+        <span class="badge badge-{{ item.status }}">
+          {% if item.status == 'plan_to_watch' %}Plan to Watch
+          {% elif item.status == 'in_progress' %}In Progress
+          {% elif item.status == 'completed' %}Completed
+          {% else %}Dropped{% endif %}
+        </span>
+      </div>
+      <div class="card-title">{{ item.title }}</div>
+      {% if item.rating is not none %}
+      <div class="stars">
+        <span class="stars-glyphs">
+          {% for _ in range(filled) %}&#9733;{% endfor %}{% for _ in range(empty) %}&#9734;{% endfor %}
+        </span>
+        <span class="stars-num">{{ item.rating }}/10</span>
+      </div>
+      {% endif %}
+      {% if item.notes %}
+      <div class="card-notes">{{ item.notes }}</div>
+      {% endif %}
+      <div class="card-meta">Added {{ item.date_added }}</div>
+    </div>
+
+    <div class="card-actions">
+      <button class="btn-icon"
+              data-action="edit-library"
+              data-id="{{ item.id }}"
+              data-title="{{ item.title | e }}"
+              data-type="{{ item.type }}"
+              data-status="{{ item.status }}"
+              data-rating="{{ item.rating if item.rating is not none else '' }}"
+              data-notes="{{ (item.notes or '') | e }}"
+              data-cover-url="{{ (item.cover_url or '') | e }}">
+        &#9998; Edit
+      </button>
+      <button class="btn-icon danger"
+              data-action="delete-library"
+              data-id="{{ item.id }}"
+              data-title="{{ item.title | e }}">
+        &#128465; Delete
+      </button>
+    </div>
+
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon">&#128218;</div>
+  <p>Your library is empty. Add movies, books, or manga to get started!</p>
+  <button class="btn btn-primary" style="margin-top:0.5rem" onclick="openAddModal('library')">+ Add Item</button>
+</div>
+{% endif %}
+
+{% endblock %}

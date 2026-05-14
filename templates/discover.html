@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!-- ── Hero ───────────────────────────────────────────────────────── -->
+<div class="discover-hero">
+  <h1>Discover Something New</h1>
+  <p>Search for movies and TV shows, or find books and manga to add to your list.</p>
+</div>
+
+<!-- ── Tab bar ────────────────────────────────────────────────────── -->
+<div class="discover-tabs">
+  <button class="discover-tab" data-tab="movie" onclick="switchDiscoverTab('movie')">&#127909; Movies</button>
+  <button class="discover-tab" data-tab="show"  onclick="switchDiscoverTab('show')">&#128250; Shows</button>
+  <button class="discover-tab" data-tab="book"  onclick="switchDiscoverTab('book')">&#128218; Books</button>
+  <button class="discover-tab" data-tab="manga"  onclick="switchDiscoverTab('manga')">&#128444; Manga</button>
+  <button class="discover-tab" data-tab="anime"  onclick="switchDiscoverTab('anime')">&#127910; Anime</button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- ── Movie panel ────────────────────────────────────────────────── -->
+<div class="discover-panel" data-panel="movie">
+
+  <div style="text-align:center;margin-bottom:1.5rem">
+    <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1rem;">
+      Search TMDB for movies to add to your library or watchlist.
+    </p>
+
+    <div class="search-bar">
+      <input
+        type="text"
+        id="movie-search"
+        placeholder="Search movies..."
+        autocomplete="off"
+      >
+      <button class="btn btn-primary" onclick="searchTmdb('movie')">Search</button>
+    </div>
+  </div>
+
+  <!-- Spinner -->
+  <div id="movie-spinner" class="spinner-wrap" style="display:none">
+    <div class="spinner"></div>
+  </div>
+
+  <!-- Error -->
+  <div id="movie-error" style="margin-top:1rem;"></div>
+
+  <!-- Results -->
+  <div id="movie-results-grid" class="card-grid"></div>
+
+</div>
+<!-- end movie panel -->
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- ── Show panel ─────────────────────────────────────────────────── -->
+<div class="discover-panel" data-panel="show" style="display:none">
+
+  <div style="text-align:center;margin-bottom:1.5rem">
+    <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1rem;">
+      Search TMDB for TV shows to add to your library or watchlist.
+    </p>
+
+    <div class="search-bar">
+      <input
+        type="text"
+        id="show-search"
+        placeholder="Search TV shows..."
+        autocomplete="off"
+      >
+      <button class="btn btn-primary" onclick="searchTmdb('show')">Search</button>
+    </div>
+  </div>
+
+  <!-- Spinner -->
+  <div id="show-spinner" class="spinner-wrap" style="display:none">
+    <div class="spinner"></div>
+  </div>
+
+  <!-- Error -->
+  <div id="show-error" style="margin-top:1rem;"></div>
+
+  <!-- Results -->
+  <div id="show-results-grid" class="card-grid"></div>
+
+</div>
+<!-- end show panel -->
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- ── Book panel ─────────────────────────────────────────────────── -->
+<div class="discover-panel" data-panel="book" style="display:none">
+
+  <div style="text-align:center;margin-bottom:1.5rem">
+    <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1rem;">
+      Search the Open Library catalog for books to add to your list.
+    </p>
+
+    <div class="search-bar">
+      <input
+        type="text"
+        id="book-search"
+        placeholder="Search for a book title..."
+        autocomplete="off"
+      >
+      <button class="btn btn-primary" onclick="searchBooks()">Search Books</button>
+    </div>
+  </div>
+
+  <!-- Spinner -->
+  <div id="book-spinner" class="spinner-wrap" style="display:none">
+    <div class="spinner"></div>
+  </div>
+
+  <!-- Error -->
+  <p id="book-error" style="color:var(--red);text-align:center;margin-top:1rem;"></p>
+
+  <!-- Results -->
+  <div id="book-results-grid" class="card-grid"></div>
+
+</div>
+<!-- end book panel -->
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- ── Manga panel ────────────────────────────────────────────────── -->
+<div class="discover-panel" data-panel="manga" style="display:none">
+
+  <div style="text-align:center;margin-bottom:1.5rem">
+    <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1rem;">
+      Search the Jikan (MyAnimeList) database for manga to add to your list.
+    </p>
+
+    <div class="search-bar">
+      <input
+        type="text"
+        id="manga-search"
+        placeholder="Search for a manga title..."
+        autocomplete="off"
+      >
+      <button class="btn btn-primary" onclick="searchManga()">Search Manga</button>
+    </div>
+  </div>
+
+  <!-- Spinner -->
+  <div id="manga-spinner" class="spinner-wrap" style="display:none">
+    <div class="spinner"></div>
+  </div>
+
+  <!-- Error -->
+  <p id="manga-error" style="color:var(--red);text-align:center;margin-top:1rem;"></p>
+
+  <!-- Results -->
+  <div id="manga-results-grid" class="card-grid"></div>
+
+</div>
+<!-- end manga panel -->
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- ── Anime panel ────────────────────────────────────────────────── -->
+<div class="discover-panel" data-panel="anime" style="display:none">
+
+  <div style="text-align:center;margin-bottom:1.5rem">
+    <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1rem;">
+      Search the Jikan (MyAnimeList) database for anime to add to your list.
+    </p>
+
+    <div class="search-bar">
+      <input
+        type="text"
+        id="anime-search"
+        placeholder="Search for an anime title..."
+        autocomplete="off"
+      >
+      <button class="btn btn-primary" onclick="searchAnime()">Search Anime</button>
+    </div>
+  </div>
+
+  <!-- Spinner -->
+  <div id="anime-spinner" class="spinner-wrap" style="display:none">
+    <div class="spinner"></div>
+  </div>
+
+  <!-- Error -->
+  <p id="anime-error" style="color:var(--red);text-align:center;margin-top:1rem;"></p>
+
+  <!-- Results -->
+  <div id="anime-results-grid" class="card-grid"></div>
+
+</div>
+<!-- end anime panel -->
+
+{% endblock %}

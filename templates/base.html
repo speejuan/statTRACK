@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>statTRACK</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<!-- ── Navbar ─────────────────────────────────────────────────────── -->
+<nav class="navbar">
+  <div class="navbar-inner">
+    <a class="nav-logo" href="/library">💀<span>stat</span>TRACK</a>
+    <div class="nav-tabs">
+      <a href="/library"   class="nav-tab {% if active_tab == 'library'   %}active{% endif %}">Library</a>
+      <a href="/watchlist" class="nav-tab {% if active_tab == 'watchlist' %}active{% endif %}">My List</a>
+      <a href="/discover"  class="nav-tab {% if active_tab == 'discover'  %}active{% endif %}">Discover</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ── Main content ───────────────────────────────────────────────── -->
+<div class="page-layout">
+  <main class="main">
+    {% block content %}{% endblock %}
+  </main>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-inner">
+
+      <!-- TMDB key setup (shown when no key) -->
+      <div class="sidebar-section" id="tmdb-setup" style="display:none">
+        <div class="sidebar-heading">Movie &amp; TV Search</div>
+        <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:0.75rem;">
+          Add a free TMDB API key to enable movie and TV show search &amp; trending.
+        </p>
+        <input type="text" id="tmdb-key-input" placeholder="Paste your TMDB key..." style="width:100%;margin-bottom:0.5rem">
+        <button class="btn btn-primary btn-sm" style="width:100%" onclick="saveTmdbKey()">Save Key</button>
+        <a href="https://www.themoviedb.org/settings/api" target="_blank" style="display:block;font-size:0.72rem;color:var(--accent);margin-top:0.4rem;text-align:center">Get free key at themoviedb.org →</a>
+      </div>
+
+      <!-- Tab switcher: Top Rated | Airing -->
+      <div class="sidebar-tabs">
+        <button class="sidebar-tab active" data-tab="top-rated"  onclick="switchSidebarTab('top-rated')">Top Rated</button>
+        <button class="sidebar-tab"        data-tab="top-airing" onclick="switchSidebarTab('top-airing')">Airing</button>
+      </div>
+
+      <!-- Category tabs: Movies | Shows | Manga | Anime | Books -->
+      <div class="sidebar-cat-tabs">
+        <button class="sidebar-cat-tab"        data-cat="movies" onclick="switchSidebarCat('movies')">Movies</button>
+        <button class="sidebar-cat-tab"        data-cat="shows"  onclick="switchSidebarCat('shows')">Shows</button>
+        <button class="sidebar-cat-tab active" data-cat="manga"  onclick="switchSidebarCat('manga')">Manga</button>
+        <button class="sidebar-cat-tab"        data-cat="anime"  onclick="switchSidebarCat('anime')">Anime</button>
+        <button class="sidebar-cat-tab"        data-cat="books"  onclick="switchSidebarCat('books')">Books</button>
+      </div>
+
+      <!-- Top Rated panel -->
+      <div id="sb-top-rated" class="sb-panel">
+        <div class="sidebar-section sb-cat-block" data-cat="movies" id="sbtr-movies" style="display:none">
+          <div id="sbtr-movies-list" class="sidebar-list"><div class="sidebar-loading">Loading...</div></div>
+        </div>
+        <div class="sidebar-section sb-cat-block" data-cat="shows" id="sbtr-shows" style="display:none">
+          <div id="sbtr-shows-list" class="sidebar-list"><div class="sidebar-loading">Loading...</div></div>
+        </div>
+        <div class="sidebar-section sb-cat-block" data-cat="manga" id="sbtr-manga">
+          <div id="sbtr-manga-list" class="sidebar-list"><div class="sidebar-loading">Loading...</div></div>
+        </div>
+        <div class="sidebar-section sb-cat-block" data-cat="anime" id="sbtr-anime" style="display:none">
+          <div id="sbtr-anime-list" class="sidebar-list"><div class="sidebar-loading">Loading...</div></div>
+        </div>
+        <div class="sidebar-section sb-cat-block" data-cat="books" id="sbtr-books" style="display:none">
+          <div id="sbtr-books-list" class="sidebar-list"><div class="sidebar-loading">Loading...</div></div>
+        </div>
+      </div>
+
+      <!-- Top Airing panel -->
+      <div id="sb-top-airing" class="sb-panel" style="display:none">
+        <div class="sidebar-section sb-cat-block" data-cat="movies" id="sbta-movies" style="display:none">
+          <div id="sbta-movies-list" class="sidebar-list"><div class="sidebar-loading">Loading...</div></div>
+        </div>
+        <div class="sidebar-section sb-cat-block" data-cat="shows" id="sbta-shows" style="display:none">
+          <div id="sbta-shows-list" class="sidebar-list"><div class="sidebar-loading">Loading...</div></div>
+        </div>
+        <div class="sidebar-section sb-cat-block" data-cat="manga" id="sbta-manga">
+          <div id="sbta-manga-list" class="sidebar-list"><div class="sidebar-loading">Loading...</div></div>
+        </div>
+        <div class="sidebar-section sb-cat-block" data-cat="anime" id="sbta-anime" style="display:none">
+          <div id="sbta-anime-list" class="sidebar-list"><div class="sidebar-loading">Loading...</div></div>
+        </div>
+        <div class="sidebar-section sb-cat-block" data-cat="books" id="sbta-books" style="display:none">
+          <div id="sbta-books-list" class="sidebar-list"><div class="sidebar-loading">Loading...</div></div>
+        </div>
+      </div>
+
+    </div>
+  </aside>
+</div>
+
+<!-- ── Shared modal ───────────────────────────────────────────────── -->
+<div class="modal-overlay hidden" id="modal-overlay">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-header">
+      <h2 id="modal-title">Modal</h2>
+      <button class="modal-close" onclick="closeModal()" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer" id="modal-footer"></div>
+  </div>
+</div>
+
+<!-- ── Toast ──────────────────────────────────────────────────────── -->
+<div id="toast" role="alert" aria-live="polite"></div>
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
