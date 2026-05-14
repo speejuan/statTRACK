@@ -820,7 +820,7 @@ async function loadLibraryRecs(force = false) {
 
     // Show type tabs; hide tabs for types with no results
     const presentTypes = new Set(recs.map(r => r.type));
-    if (tabs && presentTypes.size > 1) {
+    if (tabs) {
       tabs.style.display = 'flex';
       tabs.querySelectorAll('.recs-type-tab').forEach(el => {
         const t = el.dataset.type;
