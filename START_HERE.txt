@@ -1,0 +1,20 @@
+StatTRACK — Setup Instructions
+================================
+
+MAC (first time only):
+  1. Right-click StatTRACK.app → Open
+  2. Click "Open" when macOS warns about unidentified developer
+  3. Click "Install" when asked to set up Python tools
+  4. The app opens in your browser at http://localhost:5001
+  After setup, just double-click StatTRACK.app to launch.
+
+WINDOWS (first time only):
+  1. Double-click launch_windows.bat
+  2. Click "More info" → "Run anyway" if Windows Defender warns you
+  3. Wait ~30 seconds for Python tools to install automatically
+  4. The app opens in your browser at http://localhost:5001
+  After setup, just double-click launch_windows.bat to launch.
+
+To stop the app: close the Terminal / command prompt window that opened.
+
+Your data is saved locally in mediavault.db inside this folder.

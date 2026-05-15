@@ -1,0 +1,32 @@
+#!/bin/bash
+# Resolve project root (3 levels up from this script inside the .app bundle)
+PROJECT="$(cd "$(dirname "$0")/../../.." && pwd)"
+cd "$PROJECT"
+
+UV="$HOME/.local/bin/uv"
+
+# First-run: install uv if missing
+if [ ! -f "$UV" ]; then
+    osascript -e 'display dialog "StatTRACK needs to install a small Python tool on first run.\n\nThis takes about 30 seconds and only happens once." buttons {"Install"} default button "Install" with title "StatTRACK Setup"'
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+fi
+
+if [ ! -f "$UV" ]; then
+    osascript -e 'display alert "Setup failed" message "Could not install uv. Please install Python from python.org and run: pip install flask gunicorn" as critical'
+    exit 1
+fi
+
+# Kill any previous instance on port 5001
+lsof -ti:5001 | xargs kill -9 2>/dev/null
+
+# Open browser once server is ready
+(sleep 3 && open http://localhost:5001) &
+
+# Run the app in a Terminal window so user can see logs and quit cleanly
+osascript <<EOF
+tell application "Terminal"
+    activate
+    set w to do script "echo '=== StatTRACK is running ===' && echo 'Close this window to stop the app.' && cd '$PROJECT' && '$UV' run python app.py; echo '=== StatTRACK stopped ==='"
+    set custom title of front window to "StatTRACK"
+end tell
+EOF

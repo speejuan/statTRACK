@@ -6,3 +6,4 @@ config.json
 mediavault.db
 *.db
 .DS_Store
+StatTRACK.app/Contents/Resources/
