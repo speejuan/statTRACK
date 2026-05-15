@@ -43,7 +43,7 @@ document.addEventListener('click', e => {
     openMoveModal(+d.id, d.title, d.type);
   }
   if (action === 'disc-watchlist') {
-    addDiscoverToWatchlist(d.title, d.type, d.coverUrl || null);
+    addDiscoverToWatchlist(btn, d.title, d.type, d.coverUrl || null);
   }
   if (action === 'disc-library') {
     openDiscoverLibraryModal(d.title, d.type, d.coverUrl || null);
@@ -496,11 +496,6 @@ function renderTmdbCards(results, type, grid) {
             data-title="${escHtml(r.title)}"
             data-type="${type}"
             data-cover-url="${escHtml(r.cover_url || '')}">+ My List</button>
-          <button class="btn-icon"
-            data-action="disc-library"
-            data-title="${escHtml(r.title)}"
-            data-type="${type}"
-            data-cover-url="${escHtml(r.cover_url || '')}">+ Library</button>
         </div>
       </div>`;
   }).join('');
@@ -596,10 +591,16 @@ function renderSidebarSection(sectionId, items, type) {
   }).join('');
 }
 
-async function addDiscoverToWatchlist(title, type, coverUrl) {
+async function addDiscoverToWatchlist(btn, title, type, coverUrl) {
   try {
     await apiFetch('/api/watchlist', 'POST', { title, type: type || 'movie', cover_url: coverUrl || null });
     showToast(`"${title}" added to My List!`);
+    // Only update button appearance on actual <button> elements, not sidebar item divs
+    if (btn && btn.tagName === 'BUTTON') {
+      btn.textContent = '✓ Added';
+      btn.classList.add('btn-added');
+      btn.disabled = true;
+    }
   } catch (err) {
     showToast(err.message, true);
   }
@@ -668,7 +669,7 @@ async function searchBooks() {
                 data-title="${escHtml(r.title)}"
                 data-type="book"
                 data-cover-url="${escHtml(r.cover_url || '')}">+ My List</button>
-              <button class="btn-icon"
+              <button class="btn-icon" style="display:none"
                 data-action="disc-library"
                 data-title="${escHtml(r.title)}"
                 data-type="book"
@@ -735,11 +736,6 @@ async function searchManga() {
                 data-title="${escHtml(r.title)}"
                 data-type="manga"
                 data-cover-url="${escHtml(r.cover_url || '')}">+ My List</button>
-              <button class="btn-icon"
-                data-action="disc-library"
-                data-title="${escHtml(r.title)}"
-                data-type="manga"
-                data-cover-url="${escHtml(r.cover_url || '')}">+ Library</button>
             </div>
           </div>`;
       }).join('');
@@ -763,6 +759,15 @@ function filterRecs(type) {
   scroll.querySelectorAll('.rec-card').forEach(el => {
     el.style.display = (type === 'all' || el.dataset.recType === type) ? '' : 'none';
   });
+  // Update subtitle to reflect sources for the current type
+  const subtitle = document.getElementById('recs-subtitle');
+  if (subtitle && _allRecs.length) {
+    const visible = type === 'all' ? _allRecs : _allRecs.filter(r => r.type === type);
+    const sources = [...new Set(visible.map(r => r.because).filter(b => b && b !== 'Trending'))].slice(0, 2);
+    subtitle.textContent = sources.length
+      ? `Because you liked: ${sources.join(', ')}`
+      : 'Trending picks for you';
+  }
 }
 
 async function loadLibraryRecs(force = false) {
@@ -829,8 +834,7 @@ async function loadLibraryRecs(force = false) {
       filterRecs('all');
     }
 
-    const sources = [...new Set(recs.map(r => r.because))].slice(0, 2).join(', ');
-    if (subtitle) subtitle.textContent = `Because you liked: ${sources}`;
+    // Initial subtitle is set by filterRecs('all') above
   } catch (err) {
     if (loading) loading.style.display = 'none';
     if (btn)     btn.disabled = false;
@@ -888,11 +892,6 @@ async function searchAnime() {
                 data-title="${escHtml(r.title)}"
                 data-type="anime"
                 data-cover-url="${escHtml(r.cover_url || '')}">+ My List</button>
-              <button class="btn-icon"
-                data-action="disc-library"
-                data-title="${escHtml(r.title)}"
-                data-type="anime"
-                data-cover-url="${escHtml(r.cover_url || '')}">+ Library</button>
             </div>
           </div>`;
       }).join('');

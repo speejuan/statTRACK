@@ -568,24 +568,22 @@ def api_anime_search():
 @app.route("/api/recs/library")
 def api_recs_library():
     import re as _re
-    items = library_all()
-    if not items:
+    lib_items  = library_all()
+    list_items = watchlist_all()
+    all_items  = lib_items + list_items
+    if not all_items:
         return jsonify([])
 
-    exclude = {i["title"].lower() for i in items}
-    tmdb_key = get_tmdb_key()
+    exclude    = {i["title"].lower() for i in all_items}
+    tmdb_key   = get_tmdb_key()
 
-    def sort_key(item):
-        r = item.get("rating") or 0
-        s = {"completed": 6, "in_progress": 4, "plan_to_watch": 2, "dropped": 0}.get(item["status"], 0)
-        return r + s
-
+    # Seeds: all items sorted by rating desc (highest-rated = "because you liked X")
     by_type = {}
-    for item in sorted(items, key=sort_key, reverse=True):
+    all_sorted = sorted(lib_items, key=lambda x: x.get("rating") or 0, reverse=True) + list_items
+    for item in all_sorted:
         t = item["type"]
-        if t not in by_type:
-            by_type[t] = []
-        if len(by_type[t]) < 3:
+        by_type.setdefault(t, [])
+        if item["title"] not in by_type[t] and len(by_type[t]) < 6:
             by_type[t].append(item["title"])
 
     # ── Personalized fetchers (when type IS in library) ──────────────
@@ -610,40 +608,43 @@ def api_recs_library():
                 pass
         return results
 
-    def run_jikan(jikan_type, title):
-        try:
-            params = urllib.parse.urlencode({"q": title, "limit": 1})
-            req = urllib.request.Request(
-                f"https://api.jikan.moe/v4/{jikan_type}?{params}",
-                headers={"User-Agent": "statTRACK/1.0"})
-            with urllib.request.urlopen(req, timeout=6) as r:
-                data = json.loads(r.read()).get("data", [])
-            if not data:
-                return []
-            mal_id = data[0]["mal_id"]
-            req2 = urllib.request.Request(
-                f"https://api.jikan.moe/v4/{jikan_type}/{mal_id}/recommendations",
-                headers={"User-Agent": "statTRACK/1.0"})
-            with urllib.request.urlopen(req2, timeout=6) as r:
-                rec_data = json.loads(r.read()).get("data", [])
-            results = []
-            for rec in rec_data[:8]:
-                entry = rec.get("entry", {})
-                t = entry.get("title", "")
-                if not t or t.lower() in exclude:
+    def run_jikan(jikan_type, seeds):
+        results = []
+        for title in seeds[:3]:
+            try:
+                params = urllib.parse.urlencode({"q": title, "limit": 1})
+                req = urllib.request.Request(
+                    f"https://api.jikan.moe/v4/{jikan_type}?{params}",
+                    headers={"User-Agent": "statTRACK/1.0"})
+                with urllib.request.urlopen(req, timeout=6) as r:
+                    data = json.loads(r.read()).get("data", [])
+                if not data:
                     continue
-                cover = None
-                try:
-                    cover = entry["images"]["jpg"]["image_url"]
-                except Exception:
-                    pass
-                results.append({
-                    "title": t, "type": jikan_type,
-                    "score": None, "genres": "", "cover_url": cover, "because": title,
-                })
-            return results
-        except Exception:
-            return []
+                mal_id = data[0]["mal_id"]
+                time.sleep(0.4)
+                req2 = urllib.request.Request(
+                    f"https://api.jikan.moe/v4/{jikan_type}/{mal_id}/recommendations",
+                    headers={"User-Agent": "statTRACK/1.0"})
+                with urllib.request.urlopen(req2, timeout=6) as r:
+                    rec_data = json.loads(r.read()).get("data", [])
+                for rec in rec_data[:6]:
+                    entry = rec.get("entry", {})
+                    t = entry.get("title", "")
+                    if not t or t.lower() in exclude:
+                        continue
+                    cover = None
+                    try:
+                        cover = entry["images"]["jpg"]["image_url"]
+                    except Exception:
+                        pass
+                    results.append({
+                        "title": t, "type": jikan_type,
+                        "score": None, "genres": "", "cover_url": cover, "because": title,
+                    })
+            except Exception:
+                pass
+            time.sleep(0.4)
+        return results
 
     def run_books(seeds):
         results = []
@@ -686,38 +687,39 @@ def api_recs_library():
                 pass
         return results
 
-    def run_shows(title, key):
-        try:
-            params = urllib.parse.urlencode({"query": title, "api_key": key, "language": "en-US"})
-            req = urllib.request.Request(
-                f"https://api.themoviedb.org/3/search/tv?{params}",
-                headers={"User-Agent": "statTRACK/1.0"})
-            with urllib.request.urlopen(req, timeout=6) as r:
-                data = json.loads(r.read()).get("results", [])
-            if not data:
-                return []
-            show_id = data[0]["id"]
-            req2 = urllib.request.Request(
-                f"https://api.themoviedb.org/3/tv/{show_id}/similar?api_key={key}&language=en-US",
-                headers={"User-Agent": "statTRACK/1.0"})
-            with urllib.request.urlopen(req2, timeout=6) as r:
-                sim_data = json.loads(r.read()).get("results", [])
-            results = []
-            for item in sim_data[:6]:
-                t = item.get("name") or item.get("original_name", "")
-                if not t or t.lower() in exclude:
+    def run_shows(seeds, key):
+        results = []
+        for title in seeds[:3]:
+            try:
+                params = urllib.parse.urlencode({"query": title, "api_key": key, "language": "en-US"})
+                req = urllib.request.Request(
+                    f"https://api.themoviedb.org/3/search/tv?{params}",
+                    headers={"User-Agent": "statTRACK/1.0"})
+                with urllib.request.urlopen(req, timeout=6) as r:
+                    data = json.loads(r.read()).get("results", [])
+                if not data:
                     continue
-                poster = item.get("poster_path")
-                rating = item.get("vote_average")
-                results.append({
-                    "title": t, "type": "show",
-                    "score": round(rating, 1) if rating else None, "genres": "",
-                    "cover_url": f"https://image.tmdb.org/t/p/w185{poster}" if poster else None,
-                    "because": title,
-                })
-            return results
-        except Exception:
-            return []
+                show_id = data[0]["id"]
+                req2 = urllib.request.Request(
+                    f"https://api.themoviedb.org/3/tv/{show_id}/similar?api_key={key}&language=en-US",
+                    headers={"User-Agent": "statTRACK/1.0"})
+                with urllib.request.urlopen(req2, timeout=6) as r:
+                    sim_data = json.loads(r.read()).get("results", [])
+                for item in sim_data[:6]:
+                    t = item.get("name") or item.get("original_name", "")
+                    if not t or t.lower() in exclude:
+                        continue
+                    poster = item.get("poster_path")
+                    rating = item.get("vote_average")
+                    results.append({
+                        "title": t, "type": "show",
+                        "score": round(rating, 1) if rating else None, "genres": "",
+                        "cover_url": f"https://image.tmdb.org/t/p/w185{poster}" if poster else None,
+                        "because": title,
+                    })
+            except Exception:
+                pass
+        return results
 
     # ── Trending fallbacks (when type is NOT in library) ─────────────
 
@@ -799,30 +801,33 @@ def api_recs_library():
         except Exception:
             return []
 
+    def run_jikan_all():
+        """Run anime then manga sequentially to respect Jikan rate limit."""
+        results = []
+        anime_res = run_jikan("anime", by_type["anime"]) if "anime" in by_type else []
+        results.extend(anime_res or run_jikan_top("anime"))
+        time.sleep(0.4)
+        manga_res = run_jikan("manga", by_type["manga"]) if "manga" in by_type else []
+        results.extend(manga_res or run_jikan_top("manga"))
+        return results
+
     # ── Dispatch all fetchers in parallel ─────────────────────────────
     futures_map = {}
     with concurrent.futures.ThreadPoolExecutor(max_workers=8) as ex:
         if "movie" in by_type:
             futures_map[ex.submit(run_movies, by_type["movie"])] = "movie"
-        if "anime" in by_type:
-            futures_map[ex.submit(run_jikan, "anime", by_type["anime"][0])] = "anime"
-        else:
-            futures_map[ex.submit(run_jikan_top, "anime")] = "anime_top"
-        if "manga" in by_type:
-            futures_map[ex.submit(run_jikan, "manga", by_type["manga"][0])] = "manga"
-        else:
-            futures_map[ex.submit(run_jikan_top, "manga")] = "manga_top"
+        futures_map[ex.submit(run_jikan_all)] = "jikan"
         if "book" in by_type:
             futures_map[ex.submit(run_books, by_type["book"])] = "book"
         else:
             futures_map[ex.submit(run_books_top)] = "book_top"
         if "show" in by_type and tmdb_key:
-            futures_map[ex.submit(run_shows, by_type["show"][0], tmdb_key)] = "show"
+            futures_map[ex.submit(run_shows, by_type["show"], tmdb_key)] = "show"
         elif tmdb_key:
             futures_map[ex.submit(run_shows_top, tmdb_key)] = "show_top"
 
         all_results = []
-        for future in concurrent.futures.as_completed(futures_map, timeout=12):
+        for future in concurrent.futures.as_completed(futures_map, timeout=25):
             try:
                 all_results.extend(future.result())
             except Exception:
@@ -836,7 +841,14 @@ def api_recs_library():
         elif r.get("cover_url") and not seen[key].get("cover_url"):
             seen[key]["cover_url"] = r["cover_url"]
 
-    final_recs = list(seen.values())[:24]
+    # Balance across types so no single type crowds out others
+    type_counts = {}
+    final_recs = []
+    for r in seen.values():
+        t = r["type"]
+        if type_counts.get(t, 0) < 6:
+            final_recs.append(r)
+            type_counts[t] = type_counts.get(t, 0) + 1
 
     # Batch-fetch TMDB posters for movie recs — strip "(year)" from MovieLens titles
     if tmdb_key:
