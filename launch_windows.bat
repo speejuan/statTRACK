@@ -36,6 +36,6 @@ echo Starting StatTRACK...
 echo Open your browser to: http://localhost:5001
 echo Close this window to stop the app.
 echo.
-%UV_CMD% run python app.py
+%UV_CMD% run --python 3.12 python app.py
 
 pause

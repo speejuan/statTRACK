@@ -1,6 +1,10 @@
 #!/bin/bash
 # Resolve project root (3 levels up from this script inside the .app bundle)
 PROJECT="$(cd "$(dirname "$0")/../../.." && pwd)"
+
+# Remove quarantine so the app runs from its real location next time
+xattr -cr "$PROJECT" 2>/dev/null
+
 cd "$PROJECT"
 
 UV="$HOME/.local/bin/uv"
@@ -12,7 +16,7 @@ if [ ! -f "$UV" ]; then
 fi
 
 if [ ! -f "$UV" ]; then
-    osascript -e 'display alert "Setup failed" message "Could not install uv. Please install Python from python.org and run: pip install flask gunicorn" as critical'
+    osascript -e 'display alert "Setup failed" message "Could not install uv. Please install Python from python.org." as critical'
     exit 1
 fi
 
@@ -20,13 +24,13 @@ fi
 lsof -ti:5001 | xargs kill -9 2>/dev/null
 
 # Open browser once server is ready
-(sleep 3 && open http://localhost:5001) &
+(sleep 4 && open http://localhost:5001) &
 
-# Run the app in a Terminal window so user can see logs and quit cleanly
+# Run the app in a Terminal window
 osascript <<EOF
 tell application "Terminal"
     activate
-    set w to do script "echo '=== StatTRACK is running ===' && echo 'Close this window to stop the app.' && cd '$PROJECT' && '$UV' run python app.py; echo '=== StatTRACK stopped ==='"
+    set w to do script "echo '=== StatTRACK is running ===' && echo 'Close this window to stop the app.' && cd '$PROJECT' && '$UV' run --python 3.12 python app.py; echo '=== StatTRACK stopped ==='"
     set custom title of front window to "StatTRACK"
 end tell
 EOF
